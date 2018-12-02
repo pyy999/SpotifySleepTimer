@@ -46,19 +46,26 @@ class SleepTimer(QWidget):
         self.countdown = QLabel()
         self.running = QThread()
         self.label = QLabel('Time (Minutes)')
+        self.pauseradio = QRadioButton('Turn off Music')
+        self.sleepradio = QRadioButton('Sleep Computer')
 
         self.worker = Worker()
         self.worker.moveToThread(self.running)
         self.worker.start.connect(self.worker.run)
         self.worker.done.connect(self.timerDone)
-        self.worker.update_text.connect(lambda x: self.countdown.setText("Nighty night in: " + str(datetime.timedelta(seconds=x))))
+        self.worker.update_text.connect(self.update_time)
 
         glayout = QGridLayout()
         glayout.addWidget(self.banner, 0, 0, 1, 2)
         glayout.addWidget(self.start_stop, 2, 0, 1, 2)
         glayout.addWidget(self.label, 1, 0, 1, 1)
         glayout.addWidget(self.duration, 1, 1, 1, 1)
-        glayout.addWidget(self.countdown, 3, 0, 1, 2)
+        glayout.addWidget(self.countdown, 4, 0, 1, 2)
+        glayout.addWidget(self.pauseradio, 3, 0, 1, 1)
+        glayout.addWidget(self.sleepradio, 3, 1, 1, 1)
+        glayout.setColumnStretch(1, 1)
+        glayout.setColumnStretch(0, 1)
+        self.pauseradio.click()
         self.banner.setAlignment(Qt.AlignCenter)
         self.countdown.setAlignment(Qt.AlignCenter)
 
@@ -89,16 +96,22 @@ class SleepTimer(QWidget):
 
     @pyqtSlot()
     def timerDone(self):
-        #print('done')
         self.start_stop.setText('Start')
         self.toggle.disconnect()
         self.toggle.connect(self.startTimer)
         self.countdown.setText('')
-        keyboard.press_and_release('play/pause')
+        keyboard.send('play/pause')
+        if(self.sleepradio.isChecked()):
+            os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return:
             self.toggle.emit()
+
+    def update_time(self, val):
+        if val < 20:
+            keyboard.send('volume down')
+        self.countdown.setText("Nighty night in: " + str(datetime.timedelta(seconds=val)))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
